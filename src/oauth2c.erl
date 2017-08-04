@@ -220,26 +220,8 @@ do_retrieve_access_token(#client{grant_type = <<"client_credentials">>,
               end,
     Auth = base64:encode(<<Id/binary, ":", Secret/binary>>),
     Header = [{<<"Authorization">>, <<"Basic ", Auth/binary>>}],
-    case restc:request(post, percent, Client#client.auth_url,
-                       [200], Header, Payload, Opts) of
-        {ok, _, Headers, Body} ->
-            AccessToken = proplists:get_value(<<"access_token">>, Body),
-            TokenType = proplists:get_value(<<"token_type">>, Body, ""),
-            Result = #client{
-                             grant_type    = Client#client.grant_type
-                             ,auth_url     = Client#client.auth_url
-                             ,access_token = AccessToken
-                             ,token_type   = get_token_type(TokenType)
-                             ,id           = Client#client.id
-                             ,secret       = Client#client.secret
-                             ,scope        = Client#client.scope
-                            },
-            {ok, Headers, Result};
-        {error, _, _, Reason} ->
-            {error, Reason};
-        {error, Reason} ->
-            {error, Reason}
-    end;
+    do_client_credentials_access_token(post, percent, Client#client.auth_url,
+                                       Header, Payload, Opts, Client);
 do_retrieve_access_token(#client{grant_type = <<"azure_client_credentials">>,
                                  id = Id, secret = Secret} = Client, Opts) ->
     Payload0 = [{<<"grant_type">>, <<"client_credentials">>},
@@ -251,19 +233,30 @@ do_retrieve_access_token(#client{grant_type = <<"azure_client_credentials">>,
                   Scope ->
                       [{<<"resource">>, Scope}|Payload0]
               end,
-    case restc:request(post, percent, Client#client.auth_url,
-                       [200], [], Payload, Opts) of
+    do_client_credentials_access_token(post, percent, Client#client.auth_url,
+                                       [], Payload, Opts, Client);
+do_retrieve_access_token(#client{grant_type = <<"json_client_credentials">>,
+                                 id = Id, secret = Secret} = Client, Opts) ->
+    Payload0 = [{<<"grant_type">>, <<"client_credentials">>},
+                {<<"client_id">>, Id},
+                {<<"client_secret">>, Secret}],
+    Payload = case Client#client.scope of
+                  undefined ->
+                      Payload0;
+                  Scope ->
+                      [{<<"resource">>, Scope}|Payload0]
+              end,
+    do_client_credentials_access_token(post, json, Client#client.auth_url,
+                                       [], Payload, Opts, Client).
+
+do_client_credentials_access_token(Method, ContentType, AuthUrl, Header, Payload, Opts, Client) ->
+    case restc:request(Method, ContentType, AuthUrl, [200], Header, Payload, Opts) of
         {ok, _, Headers, Body} ->
             AccessToken = proplists:get_value(<<"access_token">>, Body),
             TokenType = proplists:get_value(<<"token_type">>, Body, ""),
-            Result = #client{
-                             grant_type    = Client#client.grant_type
-                             ,auth_url     = Client#client.auth_url
-                             ,access_token = AccessToken
+            Result = Client#client{
+                             access_token = AccessToken
                              ,token_type   = get_token_type(TokenType)
-                             ,id           = Client#client.id
-                             ,secret       = Client#client.secret
-                             ,scope        = Client#client.scope
                             },
             {ok, Headers, Result};
         {error, _, _, Reason} ->
@@ -278,6 +271,7 @@ get_token_type(Type) ->
 
 -spec get_str_token_type(string()) -> token_type().
 get_str_token_type("bearer") -> bearer;
+get_str_token_type("Bearer") -> bearer;
 get_str_token_type(_Else) -> unsupported.
 
 do_request(Method, Type, Url, Expect, Headers, Body, Options, Client) ->
@@ -287,6 +281,10 @@ do_request(Method, Type, Url, Expect, Headers, Body, Options, Client) ->
 add_auth_header(Headers, #client{grant_type = <<"azure_client_credentials">>,
                                  access_token = AccessToken}) ->
     AH = {<<"Authorization">>, <<"bearer ", AccessToken/binary>>},
+    [AH | proplists:delete(<<"Authorization">>, Headers)];
+add_auth_header(Headers, #client{grant_type = <<"json_client_credentials">>,
+                                 access_token = AccessToken}) ->
+    AH = {<<"Authorization">>, <<"Bearer ", AccessToken/binary>>},
     [AH | proplists:delete(<<"Authorization">>, Headers)];
 add_auth_header(Headers, #client{token_type = bearer,
                                  access_token = AccessToken}) ->
