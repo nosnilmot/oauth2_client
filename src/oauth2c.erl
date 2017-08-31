@@ -186,21 +186,13 @@ do_retrieve_access_token(#client{grant_type = <<"password">>} = Client, Opts) ->
             RefreshToken = proplists:get_value(<<"refresh_token">>, Body),
             Result = case RefreshToken of
                 undefined ->
-                    #client{
-                            grant_type    = Client#client.grant_type
-                            ,auth_url     = Client#client.auth_url
-                            ,access_token = AccessToken
-                            ,id           = Client#client.id
-                            ,secret       = Client#client.secret
-                            ,scope        = Client#client.scope
+                    Client#client{
+                            access_token = AccessToken
                             };
                 _ ->
-                    #client{
-                            grant_type     = Client#client.grant_type
-                            ,auth_url      = Client#client.auth_url
-                            ,access_token  = AccessToken
+                    Client#client{
+                            access_token  = AccessToken
                             ,refresh_token = RefreshToken
-                            ,scope         = Client#client.scope
                             }
             end,
             {ok, Headers, Result};
