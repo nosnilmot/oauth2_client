@@ -36,5 +36,8 @@
                   restc
                  ]},
   {env, []},
-  {modules, []}
+  {modules, []},
+  {maintainers, ["Kivra"]},
+  {licenses, ["MIT"]},
+  {links, [{"Github", "https://github.com/kivra/oauth2_client"}]}
  ]}.
