@@ -288,8 +288,10 @@ do_retrieve_access_token(#client{grant_type = <<"json_client_credentials">>,
   do_client_credentials_access_token(post, json, Client#client.auth_url,
                                      [], Payload, Opts, Client).
 
-do_client_credentials_access_token(Method, ContentType, AuthUrl, Header, Payload, Opts, Client) ->
-  case restc:request(Method, ContentType, AuthUrl, [200], Header, Payload, Opts) of
+do_client_credentials_access_token(Method, ContentType, AuthUrl, Header,
+                                   Payload, Opts, Client) ->
+  case restc:request(Method, ContentType, AuthUrl, [200], Header,
+                     Payload, Opts) of
     {ok, _, Headers, Body} ->
       AccessToken = proplists:get_value(<<"access_token">>, Body),
       TokenType = proplists:get_value(<<"token_type">>, Body, ""),
