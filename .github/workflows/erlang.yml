@@ -1,0 +1,30 @@
+name: Erlang CI
+
+on: [push]
+
+jobs:
+
+  build_and_test:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Compile
+      run: make
+    - name: Run xref
+      run: make xref
+    - name: Run common tests
+      run: make ct
+    - name: Run elvis
+      run: make elvis_rock
+
+
+  dialyze:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Run dialyzer
+      run: make dialyze

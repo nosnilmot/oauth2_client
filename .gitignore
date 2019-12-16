@@ -7,3 +7,5 @@ priv
 ebin
 .rebar
 .deps_plt
+_build
+.elvis
